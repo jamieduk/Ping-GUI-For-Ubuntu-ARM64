@@ -1,0 +1,19 @@
+
+
+Network Tools For Ubuntu ARM RPI 5 By J~Net 2024
+
+
+
+gcc -o ping-gui ping-gui.c `pkg-config --cflags --libs gtk+-3.0`
+
+
+sudo chmod +x ping-gui
+
+./ping-gui
+
+
+
+
+
+
+
