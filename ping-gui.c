@@ -2,9 +2,23 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>  // For usleep
 
 GtkWidget *result_window;
 GtkTextBuffer *text_buffer;
+
+// Function Prototypes
+void ping(const char *target);
+void ping_of_death(const char *target);
+void netstat_info();
+void on_ping_button_clicked(GtkWidget *widget, gpointer data);
+void on_ping_of_death_button_clicked(GtkWidget *widget, gpointer data);
+void on_netstat_button_clicked(GtkWidget *widget);
+void on_about_button_clicked(GtkWidget *widget);
+void show_results(const char *results);
+void execute_command(const char *command);
+void create_result_window();
+void create_main_window();
 
 void show_results(const char *results) {
     gtk_text_buffer_set_text(text_buffer, results, -1);
@@ -13,7 +27,7 @@ void show_results(const char *results) {
 
 void execute_command(const char *command) {
     char buffer[128];
-    char result[1024]=""; // Buffer to store command results
+    char result[4096]=""; // Buffer to store command results
     FILE *fp;
 
     // Execute the command and read the output
@@ -28,32 +42,49 @@ void execute_command(const char *command) {
     }
 
     pclose(fp);
-    show_results(result); // Show the command output in the result window
+    
+    // If the command returns an empty result, show a message
+    if (strlen(result) == 0) {
+        show_results("No output from command.\n");
+    } else {
+        show_results(result); // Show the command output in the result window
+    }
 }
 
 void ping(const char *target) {
     char command[256];
-    snprintf(command, sizeof(command), "ping -c 4 %s", target); // For Linux/Unix-based systems
+    snprintf(command, sizeof(command), "ping -c 4 %s", target); // Execute ping command
     execute_command(command);
 }
 
 void ping_of_death(const char *target) {
     char command[256];
-    snprintf(command, sizeof(command), "ping -f -c 1000 %s", target); // -f is flood ping, use cautiously
+    snprintf(command, sizeof(command), "ping -f -w 2 %s", target); // Flood ping
     execute_command(command);
 }
 
 void netstat_info() {
-    execute_command("netstat");
+    // Using pkexec to run netstat with root privileges
+    char command[256];
+    snprintf(command, sizeof(command), "pkexec --user $USER netstat -tuln"); // Execute netstat command
+    execute_command(command);
 }
 
 void on_ping_button_clicked(GtkWidget *widget, gpointer data) {
     const gchar *target=gtk_entry_get_text(GTK_ENTRY(data));
+    if (strlen(target) == 0) {
+        show_results("Please enter a valid IP or URL to ping.\n");
+        return;
+    }
     ping(target);
 }
 
 void on_ping_of_death_button_clicked(GtkWidget *widget, gpointer data) {
     const gchar *target=gtk_entry_get_text(GTK_ENTRY(data));
+    if (strlen(target) == 0) {
+        show_results("Please enter a valid IP or URL for Ping of Death.\n");
+        return;
+    }
     ping_of_death(target);
 }
 
@@ -64,7 +95,7 @@ void on_netstat_button_clicked(GtkWidget *widget) {
 void on_about_button_clicked(GtkWidget *widget) {
     GtkWidget *about_dialog;
     about_dialog=gtk_message_dialog_new(NULL, GTK_DIALOG_DESTROY_WITH_PARENT, GTK_MESSAGE_INFO,
-                                           GTK_BUTTONS_OK, "Network Ping Utility\nAuthor: Jay Mee @ J~Net 2024\nThis utility can ping a target and perform a flood ping.");
+                                           GTK_BUTTONS_OK, "Network Ping Utility\nAuthor: Jay Mee\n@ J~Net 2024\nThis utility can ping a target and perform a flood ping.");
     gtk_dialog_run(GTK_DIALOG(about_dialog));
     gtk_widget_destroy(about_dialog);
 }
